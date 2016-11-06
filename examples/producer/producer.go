@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/redis.v5"
 	"github.com/task-queue/go-taskmq"
-	"github.com/task-queue/redismq/broker/redis"
+	"github.com/task-queue/go-taskmq/broker/redis"
 )
 
 var queueName *string
