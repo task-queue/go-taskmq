@@ -6,7 +6,10 @@ type TaskMQ struct {
 }
 
 func New(broker IBroker, config *Config) *TaskMQ {
-	return &TaskMQ{config: config}
+	return &TaskMQ{
+		config: config,
+		broker: broker,
+	}
 }
 
 func (r *TaskMQ) Connect() error {
@@ -27,4 +30,3 @@ func (r *TaskMQ) Consume(queueName string, fn callbackFunction) {
 	c := newConsumer(broker, queueName)
 	c.Listen(fn)
 }
-

@@ -1,11 +1,11 @@
-package broker 
+package broker
 
 import (
 	"fmt"
 	"strconv"
 	"time"
 
-    "github.com/task-queue/go-taskmq"
+	"github.com/task-queue/go-taskmq"
 	"gopkg.in/redis.v5"
 )
 
@@ -26,11 +26,12 @@ func NewRedis(client *redis.Client) *Redis {
 }
 
 func (c Redis) Connect() error {
-    return nil
+	_, err := c.client.Ping().Result()
+	return err
 }
 
 func (c Redis) Clone() taskmq.IBroker {
-    return &Redis{client: c.client}
+	return &Redis{client: c.client}
 }
 
 func (c Redis) Push(queue string, body []byte) error {
