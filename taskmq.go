@@ -23,11 +23,8 @@ func (r *TaskMQ) Publish(queueName string, body []byte) {
 }
 
 func (r *TaskMQ) Consume(queueName string, fn callbackFunction) {
-	broker := r.createBroker()
+	broker := r.broker.Clone()
 	c := newConsumer(broker, queueName)
 	c.Listen(fn)
 }
 
-func (r *TaskMQ) createBroker() IBroker {
-	return &BrokerRedis{client: r.redis}
-}
