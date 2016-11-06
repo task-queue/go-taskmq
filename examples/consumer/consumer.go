@@ -3,11 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
 	"github.com/task-queue/go-taskmq"
-	"github.com/task-queue/redismq/broker/redis"
+	"github.com/task-queue/go-taskmq/broker/redis"
 	"gopkg.in/redis.v5"
 )
 
@@ -33,7 +34,11 @@ func main() {
 		DB:       0,
 	})
 
-	mq := taskmq.New(broker.NewRedis(client), nil)
+	config := &taskmq.Config{
+		Logger: log.New(os.Stdout, "", 3),
+	}
+
+	mq := taskmq.New(broker.NewRedis(client), config)
 
 	err := mq.Connect()
 	if err != nil {
@@ -59,5 +64,4 @@ func main() {
 		}
 		return nil
 	})
-
 }

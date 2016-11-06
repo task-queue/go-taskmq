@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -34,7 +35,11 @@ func main() {
 		DB:       0,
 	})
 
-	mq := taskmq.New(broker.NewRedis(client), nil)
+	config := &taskmq.Config{
+		Logger: log.New(os.Stdout, "", 3),
+	}
+
+	mq := taskmq.New(broker.NewRedis(client), config)
 
 	err := mq.Connect()
 	if err != nil {

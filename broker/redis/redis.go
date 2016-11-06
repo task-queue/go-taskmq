@@ -1,7 +1,6 @@
 package broker
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 
 type Redis struct {
 	client *redis.Client
+	logger taskmq.ILogger
 
 	id int64
 
@@ -20,6 +20,7 @@ type Redis struct {
 }
 
 func NewRedis(client *redis.Client) *Redis {
+
 	return &Redis{
 		client: client,
 	}
@@ -30,11 +31,20 @@ func (c Redis) Connect() error {
 	return err
 }
 
+func (c *Redis) SetLogger(logger taskmq.ILogger) {
+	c.logger = logger
+}
+
 func (c Redis) Clone() taskmq.IBroker {
-	return &Redis{client: c.client}
+
+	return &Redis{
+		client: c.client,
+		logger: c.logger,
+	}
 }
 
 func (c Redis) Push(queue string, body []byte) error {
+	c.debug("Push message to queue", queue)
 	cmd := c.client.LPush(queue, string(body))
 	_, err := cmd.Result()
 	return err
@@ -63,8 +73,14 @@ func (c Redis) Pop() ([]byte, error) {
 	return []byte(body), err
 }
 
-func (c Redis) Ack() {
-	c.client.RPop(c.unackedQueue)
+func (c Redis) Ack() error {
+	_, err := c.client.RPop(c.unackedQueue).Result()
+	return err
+}
+
+func (c Redis) Nack() error {
+	_, err := c.client.RPopLPush(c.unackedQueue, c.consumeQueue).Result()
+	return err
 }
 
 func (c Redis) heartbeat() {
@@ -86,30 +102,53 @@ func (c Redis) observer() {
 	consumerDieSeconds := int64(15)
 
 	for {
+		c.debug("Finding dead consumers")
 		z := redis.ZRangeBy{
 			Max:    strconv.FormatInt(time.Now().Unix()-consumerDieSeconds, 10),
 			Offset: 0,
 			Count:  -1,
 		}
-		fmt.Println("Found fails", z)
 
 		res, err := c.client.ZRangeByScore(c.heartbeatQueue, z).Result()
 		if err != nil {
-			panic(err)
+			c.error(err)
+			time.Sleep(15 * time.Second)
+			continue
 		}
 
-		fmt.Println("Res", res)
 		for _, consumerID := range res {
+			c.info("Remove dead conumer", consumerID)
 			failQueue := "redismq::" + c.consumeQueue + "::unacked::" + consumerID
+			c.debug("Move", failQueue, "to", c.consumeQueue)
 			_, err := c.client.RPopLPush(failQueue, c.consumeQueue).Result()
 			if err != nil {
-				fmt.Printf("\033[0;31m%v\033[0m\n", err)
-				// panic(err)
+				// skip error because failQueue could be empty
+				c.warning(err)
 			}
-			fmt.Println("REMOVE CONSUMER", consumerID)
-			c.client.ZRem(c.heartbeatQueue, consumerID)
+
+			c.debug("Remove conumer from heartbeat", consumerID)
+			_, err = c.client.ZRem(c.heartbeatQueue, consumerID).Result()
+			if err != nil {
+				c.error(err)
+			}
 		}
 
 		time.Sleep(15 * time.Second)
 	}
+}
+
+func (c Redis) debug(m ...interface{}) {
+	c.logger.Println("debug", m)
+}
+
+func (c Redis) info(m ...interface{}) {
+	c.logger.Println("info", m)
+}
+
+func (c Redis) warning(m ...interface{}) {
+	c.logger.Println("warn", m)
+}
+
+func (c Redis) error(m ...interface{}) {
+	c.logger.Println("error", m)
 }

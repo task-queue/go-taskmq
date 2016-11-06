@@ -3,7 +3,7 @@ package taskmq
 type Stub struct{}
 
 func (c Stub) Clone() *Stub {
-    return &Stub{}
+	return &Stub{}
 }
 
 func (c Stub) Push(name string, body []byte) error {
@@ -18,6 +18,10 @@ func (c Stub) Pop() []byte {
 	return []byte{}
 }
 
-func (c Stub) Ack() {
+func (c Stub) Ack() error {
+	return nil
+}
 
+func (c Stub) Nack() error {
+	return nil
 }

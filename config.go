@@ -1,5 +1,5 @@
 package taskmq
 
 type Config struct {
-	RedisDSN string
+	Logger ILogger
 }
