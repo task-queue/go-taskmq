@@ -4,21 +4,20 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/task-queue/go-taskmq"
-	"github.com/task-queue/go-taskmq/broker/redis"
+	"github.com/task-queue/redismq/broker/redis"
 	"gopkg.in/redis.v5"
 )
 
 var queueName *string
-var verbose bool
 var sleepMilleseconds *int
+var verbose bool
 
 func init() {
 	queueName = flag.String("queue", "task", "a queue name")
-	sleepMilleseconds = flag.Int("sleep", 100, "Sleep in millesonds between messages")
+	sleepMilleseconds = flag.Int("sleep", 10, "Sleep in millesonds for handle message")
 
 	flag.BoolVar(&verbose, "verbose", false, "Verbose output")
 	flag.BoolVar(&verbose, "v", false, "Verbose output")
@@ -42,27 +41,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println("Start pushing messages")
-	fmt.Printf("    %-23s: %dms\n", "Sleep beetween messages", *sleepMilleseconds)
+	fmt.Println("Start consuming messages")
+	fmt.Printf("    %-23s: %dms\n", "Processing time", *sleepMilleseconds)
 	fmt.Printf("    %-23s: %s\n", "Queue name", *queueName)
 	fmt.Printf("    %-23s: %v\n", "Verbose mode", verbose)
 	fmt.Println("\nPress Ctrl+C to abort")
 
-	i := 0
-	for true {
-		i++
-		mq.Publish(*queueName, []byte("Ping command "+strconv.Itoa(i)))
-
+	mq.Consume(*queueName, func(body []byte) error {
 		if verbose {
-			fmt.Printf("Publish message %d to %q... ", i, *queueName)
+			fmt.Print("Receive body:", string(body), "... ")
 		}
-
 		if *sleepMilleseconds > 0 {
 			time.Sleep(time.Duration(*sleepMilleseconds) * time.Millisecond)
 		}
-
 		if verbose {
 			fmt.Println("done")
 		}
-	}
+		return nil
+	})
+
 }
